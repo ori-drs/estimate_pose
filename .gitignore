@@ -60,12 +60,9 @@ changelog.txt
 
 cscope.*
 
-# /
-/pod-build
+pod-build
 
 # /lcmtypes/
-/lcmtypes/java
-/lcmtypes/c
-/lcmtypes/python
-
-
+lcmtypes/java
+lcmtypes/c
+lcmtypes/python
