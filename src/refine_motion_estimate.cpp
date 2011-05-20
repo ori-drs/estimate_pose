@@ -7,8 +7,8 @@
 #define dump(v) std::cerr << #v << " : " << (v) << "\n"
 #define dumpT(v) std::cerr << #v << " : " << (v).transpose() << "\n"
 
-#define dbg(...) fprintf(stderr, __VA_ARGS__)
-//#define dbg(...)
+//#define dbg(...) fprintf(stderr, __VA_ARGS__)
+#define dbg(...)
 
 #define USE_ESM
 
