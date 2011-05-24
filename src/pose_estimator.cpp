@@ -11,6 +11,8 @@ namespace pose_estimator
 int
 PoseEstimator::detectInliers(const Eigen::Matrix3Xd& ref_xyz,
                              const Eigen::Matrix3Xd& target_xyz,
+                             const Eigen::Matrix4Xd& ref_xyzw,
+                             const Eigen::Matrix4Xd& target_xyzw,
                              std::vector<char> * inliers)
 {
   assert (ref_xyz.cols() == target_xyz.cols());
@@ -31,13 +33,31 @@ PoseEstimator::detectInliers(const Eigen::Matrix3Xd& ref_xyz,
   for (int i=0; i < num_matches; ++i) {
     const Eigen::Vector3d& ref_xyz_i(ref_xyz.col(i));
     const Eigen::Vector3d& target_xyz_i(target_xyz.col(i));
+    const Eigen::Vector4d& ref_xyzw_i(ref_xyzw.col(i));
+    const Eigen::Vector4d& target_xyzw_i(target_xyzw.col(i));
+
+    // are the features points at infinity?
+    bool ref_infinity = ref_xyzw_i.w() < 1e-9;
+    bool target_infinity = target_xyzw_i.w() < 1e-9;
+
     for (int j=i+1; j < num_matches; ++j) {
       const Eigen::Vector3d& ref_xyz_j(ref_xyz.col(j));
       const Eigen::Vector3d& target_xyz_j(target_xyz.col(j));
-      double ref_dist = (ref_xyz_i-ref_xyz_j).norm();
-      double target_dist = (target_xyz_i-target_xyz_j).norm();
-      // just use 3D euclidean distance for now
-      bool compatible = fabs(ref_dist - target_dist) < clique_inlier_threshold_;
+      const Eigen::Vector4d& ref_xyzw_j(ref_xyzw.col(j));
+      const Eigen::Vector4d& target_xyzw_j(target_xyzw.col(j));
+
+      bool compatible;
+      // special case:  if either of the features are points at infinity, then
+      // we can't compare their distances.
+      if((ref_infinity && ref_xyzw_j.w() < 1e-9) ||
+         (target_infinity && target_xyzw_j.w() < 1e-9)) {
+        compatible = true;
+      } else {
+        // just use 3D euclidean distance
+        double ref_dist = (ref_xyz_i-ref_xyz_j).norm();
+        double target_dist = (target_xyz_i-target_xyz_j).norm();
+        compatible = fabs(ref_dist - target_dist) < clique_inlier_threshold_;
+      }
       if (compatible) {
         matches[i].compatibility_vec[j] = 1;
         matches[j].compatibility_vec[i] = 1;
@@ -90,7 +110,7 @@ PoseEstimator::estimate(const Eigen::Matrix4Xd& ref_xyzw,
   Eigen::Matrix3Xd target_xyz = target_xyzw.topRows<3>().cwiseQuotient(target_xyzw.row(3).replicate<3,1>());
 
   int num_matches = ref_xyz.cols();
-  int num_inliers = detectInliers(ref_xyz, target_xyz, inliers);
+  int num_inliers = detectInliers(ref_xyz, target_xyz, ref_xyzw, target_xyzw, inliers);
 
   if (num_inliers < min_inliers_) {
     return INSUFFICIENT_INLIERS;

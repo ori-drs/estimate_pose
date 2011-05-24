@@ -54,6 +54,8 @@ private:
 
   int detectInliers(const Eigen::Matrix3Xd& ref_xyz,
                     const Eigen::Matrix3Xd& target_xyz,
+                    const Eigen::Matrix4Xd& ref_xyzw,
+                    const Eigen::Matrix4Xd& target_xyzw,
                     std::vector<char> * inliers);
 
   Eigen::Matrix<double, 3, 4> proj_matrix_;
