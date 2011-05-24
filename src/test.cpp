@@ -11,8 +11,8 @@
 #include "pose_estimator.hpp"
 #include "random.hpp"
 
-#define NUM_MATCHES 300
-#define OUTLIER_PROPORTION 0.9
+#define NUM_MATCHES 400
+#define OUTLIER_PROPORTION 0.95
 
 static Eigen::Isometry3d
 random_transformation()
@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
 		Matrix4Xd src_xyz1 = tf*dst_xyz1;
 
 		// add some uniform noise to make it more interesting
-		src_xyz1.topRows<3>() += 1e-3*Matrix3Xd::Random(3, NUM_MATCHES);
+		//src_xyz1.topRows<3>() += 1e-3*Matrix3Xd::Random(3, NUM_MATCHES);
 
 		// make the first matches 'outliers' by shuffling.
 		int num_outliers = static_cast<int>(OUTLIER_PROPORTION*NUM_MATCHES);
@@ -94,6 +94,8 @@ int main(int argc, char *argv[]) {
 		for (size_t i=0; i<inliers.size(); ++i) {
 			std::cerr << static_cast<int>(inliers[i]);
 		}
+    bool is_approx = estimate.isApprox(tf);
+    std::cerr << "\nApproximately equal: " << (is_approx? "True" : "False") << "\n";
 		std::cerr << "\n***\n\n";
 	}
 
