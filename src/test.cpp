@@ -5,6 +5,8 @@
 #include <vector>
 #include <numeric>
 
+#include <sys/time.h>
+
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
@@ -12,7 +14,18 @@
 #include "random.hpp"
 
 #define NUM_MATCHES 400
-#define OUTLIER_PROPORTION 0.95
+#define OUTLIER_PROPORTION 0.80
+
+static double
+time_ms()
+{
+  timeval tv;
+  gettimeofday(&tv,NULL);
+  long long ts = tv.tv_sec;
+  ts *= 1000000;
+  ts += tv.tv_usec;
+  return (double)ts*.001;
+}
 
 static Eigen::Isometry3d
 random_transformation()
@@ -34,9 +47,13 @@ int main(int argc, char *argv[]) {
   using namespace Eigen;
   using namespace pose_estimator;
 
+  const int ITERS = 1000;
+
 	pose_estimator::Random::clock_seed();
 
-	for (int iter=0; iter < 10; ++iter) {
+  double total_time = 0;
+
+	for (int iter=0; iter < ITERS; ++iter) {
 		// random points
 		Matrix4Xd dst_xyz1 = Matrix4Xd::Ones(4, NUM_MATCHES);
 		dst_xyz1.topRows<3>() = 10*Matrix3Xd::Random(3, NUM_MATCHES);
@@ -63,7 +80,11 @@ int main(int argc, char *argv[]) {
 
 		std::vector<char> inliers;
 		Isometry3d estimate;
+
+    double t0 = time_ms();
 		int status = pe.estimate(src_xyz1, dst_xyz1, &inliers, &estimate);
+    double t1 = time_ms();
+    total_time += (t1 - t0);
 
 		int num_inliers = std::accumulate(inliers.begin(), inliers.end(), 0);
 		// pick out inliers
@@ -98,6 +119,10 @@ int main(int argc, char *argv[]) {
     std::cerr << "\nApproximately equal: " << (is_approx? "True" : "False") << "\n";
 		std::cerr << "\n***\n\n";
 	}
+
+  double mean_time = total_time / ITERS;
+
+  std::cerr << "Mean time (ms): " << mean_time << std::endl;
 
   return 0;
 }
