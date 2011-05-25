@@ -75,7 +75,7 @@ PoseEstimator::detectInliers(const Eigen::Matrix3Xd& ref_xyz,
 
   // mark first match as inlier and reject everyone incompatible with it
   for (int j=0; j < num_matches; ++j) {
-    if (!matches[0].compatibility_vec[j]) { inliers->at(j) = 0; }
+    if (!matches[0].compatibility_vec[j]) { (*inliers)[j] = 0; }
   }
   inlier_indices_.push_back(matches[0].ix);
 
@@ -89,10 +89,10 @@ PoseEstimator::detectInliers(const Eigen::Matrix3Xd& ref_xyz,
     // be inliers
     if (itr->compatibility_degree < static_cast<int>(inlier_indices_.size())) { break; }
     // skip if we know it's not an inlier
-    if (!inliers->at(itr->ix)) { continue; }
+    if (!(*inliers)[itr->ix]) { continue; }
     // else add it to clique
     for (int j=0; j < num_matches; ++j) {
-      if (!itr->compatibility_vec[j]) { inliers->at(j) = 0; }
+      if (!itr->compatibility_vec[j]) { (*inliers)[j] = 0; }
     }
     inlier_indices_.push_back(itr->ix);
   }
@@ -171,10 +171,10 @@ PoseEstimator::estimate(const Eigen::Matrix4Xd& ref_xyzw,
   std::vector<int> tmp_inlier_indices;
   for (size_t i=0; i < num_matches; ++i) {
     if (reproj_error(i) < reproj_error_threshold_) {
-      inliers->at(i) = 1;
+      (*inliers)[i] = 1;
       tmp_inlier_indices.push_back(i);
     } else {
-      inliers->at(i) = 0;
+      (*inliers)[i] = 0;
     }
   }
   // see if things have changed. If not, we're done.
