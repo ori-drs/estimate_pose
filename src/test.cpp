@@ -52,6 +52,7 @@ int main(int argc, char *argv[]) {
 	pose_estimator::Random::clock_seed();
 
   double total_time = 0;
+  int failures = 0;
 
 	for (int iter=0; iter < ITERS; ++iter) {
 		// random points
@@ -87,42 +88,54 @@ int main(int argc, char *argv[]) {
     total_time += (t1 - t0);
 
 		int num_inliers = std::accumulate(inliers.begin(), inliers.end(), 0);
+    if (!num_inliers) {
+      std::cerr << "No inliers!" << std::endl;
+      failures++;
+      continue;
+    }
 		// pick out inliers
-		Matrix4Xd inlier_src_xyz(4, num_inliers);
-		Matrix4Xd inlier_dst_xyz(4, num_inliers);
+		Matrix4Xd inlier_src_xyz1(4, num_inliers);
+		Matrix4Xd inlier_dst_xyz1(4, num_inliers);
 		for (size_t ii=0, j=0; ii<inliers.size(); ++ii) {
 			if (inliers.at(ii)) {
-				inlier_src_xyz.col(j) = src_xyz1.col(ii);
-				inlier_dst_xyz.col(j) = dst_xyz1.col(ii);
+				inlier_src_xyz1.col(j) = src_xyz1.col(ii);
+				inlier_dst_xyz1.col(j) = dst_xyz1.col(ii);
 				++j;
 			}
 		}
 
-		Matrix4Xd est_inlier_src_xyz = estimate * inlier_dst_xyz;
-		double mean_err = (est_inlier_src_xyz - inlier_src_xyz).colwise().norm().mean();
+		Matrix4Xd est_inlier_src_xyz = estimate * inlier_dst_xyz1;
+		double mean_err = (est_inlier_src_xyz - inlier_src_xyz1).colwise().norm().mean();
 
-		std::cerr << "mean inlier 3D err = " << mean_err << std::endl;
-		std::cerr << "\n";
-		std::cerr << "tf = \n";
-		std::cerr << tf.translation() << "\n";
-		std::cerr << tf.rotation() << "\n";
-		std::cerr << "\n";
-		std::cerr << "estimate = \n";
-		std::cerr << estimate.translation() << "\n";
-		std::cerr << estimate.rotation() << "\n";
-		std::cerr << "\n";
-		std::cerr << "inliers = \n";
-		for (size_t i=0; i<inliers.size(); ++i) {
-			std::cerr << static_cast<int>(inliers[i]);
-		}
     bool is_approx = estimate.isApprox(tf);
-    std::cerr << "\nApproximately equal: " << (is_approx? "True" : "False") << "\n";
-		std::cerr << "\n***\n\n";
+
+    if (!is_approx) {
+      std::cerr << "Not approx" << std::endl;
+      std::cerr << "mean inlier 3D err = " << mean_err << std::endl;
+      std::cerr << "\n";
+      std::cerr << "tf = \n";
+      std::cerr << tf.translation() << "\n";
+      std::cerr << tf.rotation() << "\n";
+      std::cerr << "\n";
+      std::cerr << "estimate = \n";
+      std::cerr << estimate.translation() << "\n";
+      std::cerr << estimate.rotation() << "\n";
+      std::cerr << "\n";
+      std::cerr << "inliers = \n";
+      for (size_t i=0; i<inliers.size(); ++i) {
+        std::cerr << static_cast<int>(inliers[i]);
+      }
+      std::cerr << "\n***\n\n";
+      failures++;
+    }
+
 	}
 
   double mean_time = total_time / ITERS;
 
-  std::cerr << "Mean time (ms): " << mean_time << std::endl;
+  std::cerr << "Mean time (ms): " << mean_time << "\n";
+  std::cerr << "failures = " << failures <<
+      "/" << ITERS << "\n";
 
   return 0;
 }

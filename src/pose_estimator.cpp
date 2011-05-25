@@ -113,6 +113,7 @@ PoseEstimator::estimate(const Eigen::Matrix4Xd& ref_xyzw,
   int num_inliers = detectInliers(ref_xyz, target_xyz, ref_xyzw, target_xyzw, inliers);
 
   if (num_inliers < min_inliers_) {
+    std::cerr << "NO INLIERS AFTER DET" << std::endl;
     return INSUFFICIENT_INLIERS;
   }
 
@@ -178,17 +179,20 @@ PoseEstimator::estimate(const Eigen::Matrix4Xd& ref_xyzw,
     }
   }
   // see if things have changed. If not, we're done.
-  if (tmp_inlier_indices.size()==inlier_indices_.size()) { return SUCCESS; }
+  if (tmp_inlier_indices == inlier_indices_) { return SUCCESS; }
   // we removed more outliers, update outliers and re-refine.
   inlier_indices_.swap(tmp_inlier_indices);
   num_inliers = static_cast<int>(inlier_indices_.size());
   if (num_inliers < min_inliers_) {
+    std::cerr << "ERROR AFTER REF" << std::endl;
     return INSUFFICIENT_INLIERS;
   }
 
   // again, group remaining inliers
-  inlier_ref_xyzw = Eigen::Matrix4Xd(4, num_inliers);
-  inlier_target_xyzw = Eigen::Matrix4Xd(4, num_inliers);
+  inlier_ref_xyzw.resize(4, num_inliers);
+  inlier_target_xyzw.resize(4, num_inliers);
+  inlier_ref_uv.resize(2, num_inliers);
+  inlier_target_uv.resize(2, num_inliers);
   for (int i=0; i < num_inliers; ++i) {
     int ix = inlier_indices_[i];
     inlier_ref_xyzw.col(i) = ref_xyzw.col(ix);
