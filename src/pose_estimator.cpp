@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <iostream>
 
-#include "refine_motion_estimate.hpp"
+#include <fovis/refine_motion_estimate.hpp>
 
 namespace pose_estimator
 {

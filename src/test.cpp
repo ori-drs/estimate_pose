@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
 		Matrix4Xd est_inlier_src_xyz = estimate * inlier_dst_xyz1;
 		double mean_err = (est_inlier_src_xyz - inlier_src_xyz1).colwise().norm().mean();
 
-    bool is_approx = estimate.isApprox(tf);
+    bool is_approx = estimate.isApprox(tf, 1e-3);
 
     if (!is_approx) {
       std::cerr << "Not approx" << std::endl;
