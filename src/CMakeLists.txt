@@ -14,16 +14,15 @@ add_library(estimate-pose SHARED
 set_target_properties(estimate-pose PROPERTIES SOVERSION 1)
 
 pods_use_pkg_config_packages(pose-estimator-test
-    opencv
     eigen3
-    fovis
+    libfovis
     )
 
 target_link_libraries(pose-estimator-test estimate-pose)
 
 pods_install_pkg_config_file(estimate-pose
     LIBS -lestimate-pose
-    REQUIRES eigen3
+    REQUIRES eigen3 libfovis
     VERSION 0.0.1)
 
 pods_use_pkg_config_packages(estimate-pose eigen3)
