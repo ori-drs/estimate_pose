@@ -16,7 +16,7 @@ enum PoseEstimateStatus {
  REPROJECTION_ERROR
 };
 
-std::string PoseEstimateStatusToString(PoseEstimateStatus status);
+extern const char *PoseEstimateStatusToString[];
 
 class PoseEstimator {
 public:
