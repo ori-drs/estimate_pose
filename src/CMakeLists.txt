@@ -25,7 +25,7 @@ pods_install_pkg_config_file(estimate-pose
     REQUIRES eigen3 libfovis
     VERSION 0.0.1)
 
-pods_use_pkg_config_packages(estimate-pose eigen3 fovis)
+pods_use_pkg_config_packages(estimate-pose eigen3 libfovis)
 
 pods_install_libraries(estimate-pose)
 
