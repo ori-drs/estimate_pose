@@ -28,7 +28,8 @@ public:
   PoseEstimateStatus estimate(const Eigen::Matrix4Xd& ref_xyzw,
                               const Eigen::Matrix4Xd& target_xyzw,
                               std::vector<char> * inliers,
-                              Eigen::Isometry3d * estimate);
+                              Eigen::Isometry3d * estimate,
+                              Eigen::MatrixXd * estimate_covariance);
 
   double clique_inlier_threshold() { return clique_inlier_threshold_; }
   void set_clique_inlier_threshold(double val) { clique_inlier_threshold_ = val; }
@@ -67,6 +68,6 @@ private:
 
 };
 
-} /*  */
+}
 
 #endif /* end of include guard: POSE_ESTIMATOR_9KXR642X */

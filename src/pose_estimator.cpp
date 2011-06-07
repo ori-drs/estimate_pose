@@ -8,13 +8,11 @@
 namespace pose_estimator
 {
 
-int
-PoseEstimator::detectInliers(const Eigen::Matrix3Xd& ref_xyz,
-                             const Eigen::Matrix3Xd& target_xyz,
-                             const Eigen::Matrix4Xd& ref_xyzw,
-                             const Eigen::Matrix4Xd& target_xyzw,
-                             std::vector<char> * inliers)
-{
+int PoseEstimator::detectInliers(const Eigen::Matrix3Xd& ref_xyz,
+                                 const Eigen::Matrix3Xd& target_xyz,
+                                 const Eigen::Matrix4Xd& ref_xyzw,
+                                 const Eigen::Matrix4Xd& target_xyzw,
+                                 std::vector<char> * inliers) {
   assert (ref_xyz.cols() == target_xyz.cols());
   assert (ref_xyz.cols() > 0);
 
@@ -100,12 +98,12 @@ PoseEstimator::detectInliers(const Eigen::Matrix3Xd& ref_xyz,
   return static_cast<int>(inlier_indices_.size());
 }
 
-PoseEstimateStatus
-PoseEstimator::estimate(const Eigen::Matrix4Xd& ref_xyzw,
-                        const Eigen::Matrix4Xd& target_xyzw,
-                        std::vector<char> * inliers,
-                        Eigen::Isometry3d * estimate)
-{
+PoseEstimateStatus PoseEstimator::estimate(const Eigen::Matrix4Xd& ref_xyzw,
+                                           const Eigen::Matrix4Xd& target_xyzw,
+                                           std::vector<char> * inliers,
+                                           Eigen::Isometry3d * estimate,
+                                           Eigen::MatrixXd * estimate_covariance) {
+
   Eigen::Matrix3Xd ref_xyz = ref_xyzw.topRows<3>().cwiseQuotient(ref_xyzw.row(3).replicate<3, 1>());
   Eigen::Matrix3Xd target_xyz = target_xyzw.topRows<3>().cwiseQuotient(target_xyzw.row(3).replicate<3,1>());
 
@@ -113,7 +111,7 @@ PoseEstimator::estimate(const Eigen::Matrix4Xd& ref_xyzw,
   int num_inliers = detectInliers(ref_xyz, target_xyz, ref_xyzw, target_xyzw, inliers);
 
   if (num_inliers < min_inliers_) {
-    std::cerr << "NO INLIERS AFTER DET" << std::endl;
+    //std::cerr << "NO INLIERS AFTER DET" << std::endl;
     return INSUFFICIENT_INLIERS;
   }
 
@@ -147,8 +145,6 @@ PoseEstimator::estimate(const Eigen::Matrix4Xd& ref_xyzw,
     inlier_target_uv.col(i) = target_uv.col(inlier_indices_[i]);
   }
 
-  // TODO return covariance
-  Eigen::MatrixXd estimate_covariance;
   // refine bidirectional projection error
   fovis::refineMotionEstimateBidirectional(inlier_ref_xyzw,
                                            inlier_ref_uv,
@@ -160,7 +156,7 @@ PoseEstimator::estimate(const Eigen::Matrix4Xd& ref_xyzw,
                                            *estimate,
                                            6,
                                            estimate,
-                                           &estimate_covariance);
+                                           estimate_covariance);
 
   // compute projection error
   Eigen::Matrix3Xd reproj_target_uvw = proj_matrix_ * estimate->matrix() * target_xyzw;
@@ -178,6 +174,7 @@ PoseEstimator::estimate(const Eigen::Matrix4Xd& ref_xyzw,
       (*inliers)[i] = 0;
     }
   }
+
   // see if things have changed. If not, we're done.
   if (tmp_inlier_indices == inlier_indices_) { return SUCCESS; }
   // we removed more outliers, update outliers and re-refine.
@@ -212,7 +209,7 @@ PoseEstimator::estimate(const Eigen::Matrix4Xd& ref_xyzw,
                                            *estimate,
                                            6,
                                            estimate,
-                                           &estimate_covariance);
+                                           estimate_covariance);
 
   return SUCCESS;
 

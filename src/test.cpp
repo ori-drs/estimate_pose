@@ -81,9 +81,10 @@ int main(int argc, char *argv[]) {
 
 		std::vector<char> inliers;
 		Isometry3d estimate;
+    MatrixXd estimate_cov;
 
     double t0 = time_ms();
-		int status = pe.estimate(src_xyz1, dst_xyz1, &inliers, &estimate);
+		int status = pe.estimate(src_xyz1, dst_xyz1, &inliers, &estimate, &estimate_cov);
     double t1 = time_ms();
     total_time += (t1 - t0);
 
