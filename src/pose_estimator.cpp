@@ -8,7 +8,7 @@
 namespace pose_estimator
 {
 
-const char *PoseEstimateStatusToString[] = {
+const char *PoseEstimateStatusStrings[] = {
   "SUCCESS",
   "INSUFFICIENT_INLIERS",
   "OPTIMIZATION_FAILURE",

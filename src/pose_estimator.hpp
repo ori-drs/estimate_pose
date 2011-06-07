@@ -16,7 +16,7 @@ enum PoseEstimateStatus {
  REPROJECTION_ERROR
 };
 
-extern const char *PoseEstimateStatusToString[];
+extern const char *PoseEstimateStatusStrings[];
 
 class PoseEstimator {
 public:
