@@ -111,7 +111,9 @@ PoseEstimateStatus PoseEstimator::estimate(const Eigen::Matrix4Xd& ref_xyzw,
   int num_inliers = detectInliers(ref_xyz, target_xyz, ref_xyzw, target_xyzw, inliers);
 
   if (num_inliers < min_inliers_) {
-    //std::cerr << "NO INLIERS AFTER DET" << std::endl;
+    if (verbose_) {
+      std::cerr << "pose_estimator: Insufficient inliers after max clique" << std::endl;
+    }
     return INSUFFICIENT_INLIERS;
   }
 
@@ -181,7 +183,9 @@ PoseEstimateStatus PoseEstimator::estimate(const Eigen::Matrix4Xd& ref_xyzw,
   inlier_indices_.swap(tmp_inlier_indices);
   num_inliers = static_cast<int>(inlier_indices_.size());
   if (num_inliers < min_inliers_) {
-    std::cerr << "ERROR AFTER REF" << std::endl;
+    if (verbose_) {
+      std::cerr << "pose_estimator: Insufficient inliers after refinement" << std::endl;
+    }
     return INSUFFICIENT_INLIERS;
   }
 

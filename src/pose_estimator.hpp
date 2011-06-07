@@ -22,7 +22,8 @@ public:
       proj_matrix_(proj_matrix),
       clique_inlier_threshold_(0.2),
       min_inliers_(10),
-      reproj_error_threshold_(2.0)
+      reproj_error_threshold_(2.0),
+      verbose_(false)
   { }
 
   PoseEstimateStatus estimate(const Eigen::Matrix4Xd& ref_xyzw,
@@ -33,6 +34,8 @@ public:
 
   double clique_inlier_threshold() { return clique_inlier_threshold_; }
   void set_clique_inlier_threshold(double val) { clique_inlier_threshold_ = val; }
+
+  void set_verbose(bool val) { verbose_ = val; }
 
   int min_inliers() { return min_inliers_; }
   void min_inliers(int val) { min_inliers_ = val; }
@@ -65,7 +68,7 @@ private:
   double clique_inlier_threshold_;
   int min_inliers_;
   double reproj_error_threshold_;
-
+  bool verbose_;
 };
 
 }
