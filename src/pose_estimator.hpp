@@ -16,6 +16,8 @@ enum PoseEstimateStatus {
  REPROJECTION_ERROR
 };
 
+std::string PoseEstimateStatusToString(PoseEstimateStatus status);
+
 class PoseEstimator {
 public:
   PoseEstimator(const Eigen::Matrix<double, 3, 4>& proj_matrix) :

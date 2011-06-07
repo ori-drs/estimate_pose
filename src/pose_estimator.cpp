@@ -8,6 +8,17 @@
 namespace pose_estimator
 {
 
+std::string PoseEstimateStatusToString(PoseEstimateStatus status) {
+  switch (status) {
+    case SUCCESS: return "SUCCESS";
+    case INSUFFICIENT_INLIERS: return "INSUFFICIENT_INLIERS";
+    case OPTIMIZATION_FAILURE: return "OPTIMIZATION_FAILURE";
+    case REPROJECTION_ERROR: return "REPROJECTION_ERROR";
+    default: return "";
+  }
+  return "";
+}
+
 int PoseEstimator::detectInliers(const Eigen::Matrix3Xd& ref_xyz,
                                  const Eigen::Matrix3Xd& target_xyz,
                                  const Eigen::Matrix4Xd& ref_xyzw,
