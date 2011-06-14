@@ -6,6 +6,9 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
+// TODO a better way to choose behavior
+#define USE_RANSAC
+
 namespace pose_estimator
 {
 
@@ -25,6 +28,9 @@ public:
       clique_inlier_threshold_(0.2),
       min_inliers_(10),
       reproj_error_threshold_(2.0),
+#ifdef USE_RANSAC
+      sac_iterations_(700),
+#endif
       verbose_(false)
   { }
 
@@ -37,13 +43,18 @@ public:
   double clique_inlier_threshold() { return clique_inlier_threshold_; }
   void set_clique_inlier_threshold(double val) { clique_inlier_threshold_ = val; }
 
-  void set_verbose(bool val) { verbose_ = val; }
-
   int min_inliers() { return min_inliers_; }
   void min_inliers(int val) { min_inliers_ = val; }
 
   double reproj_error_threshold() { return reproj_error_threshold_; }
   void set_reproj_error_threshold(double val) { reproj_error_threshold_ = val; }
+
+#ifdef USE_RANSAC
+  int sac_iterations() { return sac_iterations_; }
+  void set_sac_iterations(int val) { sac_iterations_ = val; }
+#endif
+
+  void set_verbose(bool val) { verbose_ = val; }
 
 private:
   // Helper struct to keep track of matches
@@ -58,11 +69,19 @@ private:
     return x.compatibility_degree > y.compatibility_degree;
   }
 
-  int detectInliers(const Eigen::Matrix3Xd& ref_xyz,
-                    const Eigen::Matrix3Xd& target_xyz,
-                    const Eigen::Matrix4Xd& ref_xyzw,
-                    const Eigen::Matrix4Xd& target_xyzw,
-                    std::vector<char> * inliers);
+  int detectInliersClique(const Eigen::Matrix3Xd& ref_xyz,
+                          const Eigen::Matrix3Xd& target_xyz,
+                          const Eigen::Matrix4Xd& ref_xyzw,
+                          const Eigen::Matrix4Xd& target_xyzw,
+                          std::vector<char> * inliers);
+
+#ifdef USE_RANSAC
+  int detectInliersRansac(const Eigen::Matrix3Xd& ref_xyz,
+                          const Eigen::Matrix3Xd& target_xyz,
+                          const Eigen::Matrix4Xd& ref_xyzw,
+                          const Eigen::Matrix4Xd& target_xyzw,
+                          std::vector<char> * inliers);
+#endif
 
   Eigen::Matrix<double, 3, 4> proj_matrix_;
   std::vector<int> inlier_indices_;
@@ -70,8 +89,11 @@ private:
   double clique_inlier_threshold_;
   int min_inliers_;
   double reproj_error_threshold_;
+  int sac_iterations_;
   bool verbose_;
 };
+
+
 
 }
 

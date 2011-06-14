@@ -5,6 +5,8 @@
 
 #include <fovis/refine_motion_estimate.hpp>
 
+#include "random.hpp"
+
 namespace pose_estimator
 {
 
@@ -15,11 +17,11 @@ const char *PoseEstimateStatusStrings[] = {
   "REPROJECTION_ERROR"
 };
 
-int PoseEstimator::detectInliers(const Eigen::Matrix3Xd& ref_xyz,
-                                 const Eigen::Matrix3Xd& target_xyz,
-                                 const Eigen::Matrix4Xd& ref_xyzw,
-                                 const Eigen::Matrix4Xd& target_xyzw,
-                                 std::vector<char> * inliers) {
+int PoseEstimator::detectInliersClique(const Eigen::Matrix3Xd& ref_xyz,
+                                       const Eigen::Matrix3Xd& target_xyz,
+                                       const Eigen::Matrix4Xd& ref_xyzw,
+                                       const Eigen::Matrix4Xd& target_xyzw,
+                                       std::vector<char> * inliers) {
   assert (ref_xyz.cols() == target_xyz.cols());
   assert (ref_xyz.cols() > 0);
 
@@ -105,6 +107,116 @@ int PoseEstimator::detectInliers(const Eigen::Matrix3Xd& ref_xyz,
   return static_cast<int>(inlier_indices_.size());
 }
 
+
+#ifdef USE_RANSAC
+int PoseEstimator::detectInliersRansac(const Eigen::Matrix3Xd& ref_xyz,
+                                       const Eigen::Matrix3Xd& target_xyz,
+                                       const Eigen::Matrix4Xd& ref_xyzw,
+                                       const Eigen::Matrix4Xd& target_xyzw,
+                                       std::vector<char> * inliers) {
+
+  if (ref_xyz.cols() < min_inliers_) {
+    inlier_indices_.clear();
+    return 0;
+  }
+
+  // TODO avoid this repetition
+  Eigen::Matrix3Xd ref_uvw = proj_matrix_ * ref_xyzw;
+  Eigen::Matrix2Xd ref_uv = ref_uvw.topRows<2>().cwiseQuotient(ref_uvw.row(2).replicate<2,1>());
+
+  double min_loss = 1.0e15;
+  Eigen::Isometry3d best_estimate;
+
+  //
+  // In theory, for .99 probability of finding correct hypothesis
+  // according to fraction of outliers
+  // 0.50 -> 35
+  // 0.55 -> 49
+  // 0.60 -> 70
+  // 0.65 -> 106
+  // 0.70 -> 169
+  // 0.75 -> 293
+  // 0.80 -> 574
+  // 0.85 -> 1363
+  // 0.90 -> 4603
+  // 0.95 -> 36840
+  //
+
+  Eigen::Matrix3d sampled_ref_xyz, sampled_target_xyz;
+  int num_matches = ref_xyz.cols();
+  for (int i=0; i < sac_iterations_; ++i) {
+    // Randomly select 3 different matches
+    int a = Random::random_int(0, num_matches);
+    int b = a;
+    while (a == b) {
+      b = Random::random_int(0, num_matches);
+    }
+    int c = a;
+    while (c == a || c == b) {
+      c = Random::random_int(0, num_matches);
+    }
+
+    sampled_ref_xyz.col(0) = ref_xyz.col(a);
+    sampled_ref_xyz.col(1) = ref_xyz.col(b);
+    sampled_ref_xyz.col(2) = ref_xyz.col(c);
+
+    sampled_target_xyz.col(0) = target_xyz.col(a);
+    sampled_target_xyz.col(1) = target_xyz.col(b);
+    sampled_target_xyz.col(2) = target_xyz.col(c);
+
+#if USE_HORN
+    Eigen::Isometry3d estimate;
+    int ret = absolute_orientation_horn(sampled_target_xyz, sampled_ref_xyz, &estimate);
+    if (ret) { continue; }
+#else
+    Eigen::Isometry3d estimate = Eigen::Isometry3d(Eigen::umeyama(sampled_target_xyz, sampled_ref_xyz));
+#endif
+
+    // find inliers based on reprojection
+    //bot_tictoc("match scoring");
+    Eigen::Matrix3Xd reproj_uvw = proj_matrix_ * estimate.matrix() * target_xyzw;
+    Eigen::Matrix2Xd reproj_uv = reproj_uvw.topRows<2>().cwiseQuotient(reproj_uvw.row(2).replicate<2,1>());
+    Eigen::VectorXd reproj_err = (reproj_uv - ref_uv).colwise().norm();
+
+    double loss=0;
+    for (int m_ind = 0; m_ind < num_matches; ++m_ind) {
+      if (m_ind == a || m_ind == b || m_ind == c) { continue; }
+      if (reproj_err(m_ind) > reproj_error_threshold_) {
+        loss += reproj_error_threshold_;
+      } // else do nothing
+      if (loss > min_loss) {
+        break; // loss always increases so this is not the best
+      }
+    }
+    if (loss < min_loss) {
+      min_loss = loss;
+      best_estimate = estimate;
+    }
+    //bot_tictoc("match scoring");
+    //printf("ransac %d: inliers: %d\n", i, inliers);
+  }
+
+  // mark final inliers
+  Eigen::Matrix3Xd reproj_uvw = proj_matrix_ * best_estimate.matrix() * target_xyzw;
+  Eigen::Matrix2Xd reproj_uv = reproj_uvw.topRows<2>().cwiseQuotient(reproj_uvw.row(2).replicate<2,1>());
+  Eigen::VectorXd reproj_err = (reproj_uv - ref_uv).colwise().norm();
+
+  inlier_indices_.clear();
+  inliers->clear(); inliers->resize(num_matches, 0);
+  double loss=0;
+  for (int m_ind = 0; m_ind < num_matches; ++m_ind) {
+    if (reproj_err(m_ind) < reproj_error_threshold_) {
+      inlier_indices_.push_back(m_ind);
+      (*inliers)[m_ind] = 1;
+    }
+  }
+  int num_inliers = static_cast<int>(inlier_indices_.size());
+
+  return num_inliers;
+  // TODO fix redundancy after this
+}
+#endif
+
 PoseEstimateStatus PoseEstimator::estimate(const Eigen::Matrix4Xd& ref_xyzw,
                                            const Eigen::Matrix4Xd& target_xyzw,
                                            std::vector<char> * inliers,
@@ -115,7 +227,11 @@ PoseEstimateStatus PoseEstimator::estimate(const Eigen::Matrix4Xd& ref_xyzw,
   Eigen::Matrix3Xd target_xyz = target_xyzw.topRows<3>().cwiseQuotient(target_xyzw.row(3).replicate<3,1>());
 
   int num_matches = ref_xyz.cols();
-  int num_inliers = detectInliers(ref_xyz, target_xyz, ref_xyzw, target_xyzw, inliers);
+#ifdef USE_RANSAC
+  int num_inliers = detectInliersRansac(ref_xyz, target_xyz, ref_xyzw, target_xyzw, inliers);
+#else
+  int num_inliers = detectInliersClique(ref_xyz, target_xyz, ref_xyzw, target_xyzw, inliers);
+#endif
 
   if (num_inliers < min_inliers_) {
     if (verbose_) {
