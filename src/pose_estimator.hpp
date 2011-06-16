@@ -7,7 +7,7 @@
 #include <Eigen/Geometry>
 
 // TODO a better way to choose behavior
-#define USE_RANSAC
+//#define USE_RANSAC
 
 namespace pose_estimator
 {
